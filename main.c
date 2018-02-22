@@ -14,7 +14,7 @@ int8_t sb_rear = -1;
 
 uint8_t start_flag = 0;
 uint8_t i;
-uint16_t datapoint;
+
 
 bool sbuf_isfull() {
     if ((sb_front == sb_rear + 1) || (sb_front == 0 && sb_rear == SB_DATA_WINDOW - 1))
@@ -70,7 +70,7 @@ void TMR6_EMG_InterruptHandler(void)
         //ADCC_StartConversion(EMG_RA1);
         adc_result_t adval = ADCC_GetConversionResult();
         sbuf_insert(adval/100);
-    } 
+    }
 }
 
 void main(void)
@@ -94,20 +94,24 @@ void main(void)
     //INTERRUPT_PeripheralInterruptDisable();
     
     TMR6_SetInterruptHandler(TMR6_EMG_InterruptHandler);
+    TMR6_Start();
     
     int count=0;
+    uint16_t neutral_datapoint, result, datapoint;
     double time_elapsed;
 
     while (1)
     {
+        
         if (SWITCH_RC5_GetValue() == 0 && start_flag == 0) {
             printf("START\r\n");
             start_flag = 1;
-            __delay_ms(400);
+            __delay_ms(700);
         } else if (SWITCH_RC5_GetValue() == 0 && start_flag == 1) {
             //printf("STOP\r\n");
             start_flag = 0;
-            __delay_ms(400);
+            __delay_ms(700);
+            TMR6_Stop();
         }
         
         if(start_flag == 1)
@@ -118,7 +122,10 @@ void main(void)
 
             if(count>0)
             {
-                datapoint = sbuf_peek();
+                datapoint = sbuf_peek()/100;
+                //neutral_datapoint = get_neutral_peaktopeak(datapoint);
+                //result = get_moving_average(abs(datapoint - neutral_datapoint));
+                
                 printf("%u,%f\r\n",datapoint, time_elapsed);
                 sbuf_remove();
                 time_elapsed += 5.0;
