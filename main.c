@@ -208,8 +208,8 @@ float get_moving_average(uint16_t datapoint) {
 void TMR6_EMG_InterruptHandler(void)
 {
     if (start_flag == 1) {
-        ADCC_StartConversion(POT_RA0);
-        //ADCC_StartConversion(EMG_RA1);
+        //ADCC_StartConversion(POT_RA0);
+        ADCC_StartConversion(EMG_RA1);
         adc_result_t adval = ADCC_GetConversionResult();
         sbuf_insert(adval/100);
     }
@@ -264,11 +264,11 @@ void main(void)
 
             if(count>0)
             {
-                datapoint = sbuf_peek()/100;
-                //neutral_datapoint = get_neutral_peaktopeak(datapoint);
-                //result = get_moving_average(abs(datapoint - neutral_datapoint));
+                datapoint = sbuf_peek();
+                neutral_datapoint = get_neutral_peaktopeak(datapoint);
+                result = get_moving_average(abs(datapoint - neutral_datapoint));
                 
-                printf("%u,%f\r\n",datapoint, time_elapsed);
+                printf("%u,%f\r\n",result, time_elapsed);
                 sbuf_remove();
                 time_elapsed += 5.0;
             }
