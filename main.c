@@ -20,8 +20,8 @@
 // Size of (circular) buffer for peak filter. Twice the maximum gap
 #define PK_DATA_WINDOW (2*MAX_PK_GAP+1)
 
-// Size of (circular) buffer for moving average filter. Considers last 0.5 seconds of data for moving average
-#define MA_DATA_WINDOW ((int)(SAMPLE_FREQUENCY * 0.5))
+// Size of (circular) buffer for moving average filter. Considers last 0.5 seconds of data for moving average 
+#define MA_DATA_WINDOW ((int)(SAMPLE_FREQUENCY * 0.5)+1)
 
 // Actual buffer for emg data and indexes to keep track of the circular buffer
 uint16_t sb_data[SB_DATA_WINDOW];
@@ -233,8 +233,8 @@ float get_moving_average(uint16_t datapoint) {
         madata_remove();
     }
 
-    // return ma_window_sum / (MA_DATA_WINDOW-1);
-    return ma_window_sum / MA_DATA_WINDOW;
+    // MA_DATA_WINDOW is 1 more than intended Moving Average Window
+    return ma_window_sum / (MA_DATA_WINDOW-1);
 }
 
 // Interrupt handler that is called every 20ms, thus sampling the EMG signal at 50Hz
