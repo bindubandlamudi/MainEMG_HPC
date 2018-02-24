@@ -44,6 +44,9 @@ uint16_t ma_window_sum = 0;
 uint8_t start_flag = 0;
 uint8_t i;
 
+uint8_t sent_1 =0;
+uint8_t sent_0 =0;
+
 // Returns true if circular buffer is full
 bool sbuf_isfull() {
     if ((sb_front == sb_rear + 1) || (sb_front == 0 && sb_rear == SB_DATA_WINDOW - 1))
@@ -251,6 +254,7 @@ void TMR6_EMG_InterruptHandler(void)
     }
 }
 
+
 void main(void)
 {
     // initialize the device
@@ -278,11 +282,12 @@ void main(void)
     int count=0;
     uint16_t neutral_datapoint, result, datapoint;
     double time_elapsed;
+    int increasing = 0;
 
     while (1)
     {
         if (SWITCH_RC5_GetValue() == 0 && start_flag == 0) {
-            printf("START\r\n");
+            //printf("START\r\n");
             start_flag = 1;
             __delay_ms(700);
         } else if (SWITCH_RC5_GetValue() == 0 && start_flag == 1) {
@@ -309,10 +314,20 @@ void main(void)
                 // Uses the neutral point to subtract it from the current datapoint.Rectifies (by taking absolute) the signal
                 result = get_moving_average(abs(datapoint - neutral_datapoint));
                 
-                // todo...Reject/ donot consider result until atleast 2*MIN_PK_GAP is calculated ????
+                if(result>= 25 && sent_1 == 0)
+                {
+                    printf("1");
+                    sent_1 = 1;
+                    sent_0 = 0;
+                }
+                else if(result<25 && sent_0 == 0)
+                {
+                    printf("0");
+                    sent_0 = 1;
+                    sent_1 = 0;
+                }
                 
-                // Send data from MikroPlot
-                printf("%u,%f\r\n",result, time_elapsed);
+                // todo...Reject/ donot consider result until atleast 2*MIN_PK_GAP is calculated ????
                 
                 // Remove the first element (in FIFO order) since it has already been processed
                 sbuf_remove();
