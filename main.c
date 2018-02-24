@@ -23,17 +23,17 @@
 // Size of (circular) buffer for moving average filter. Considers last 0.5 seconds of data for moving average 
 #define MA_DATA_WINDOW ((int)(SAMPLE_FREQUENCY * 0.5)+1)
 
-// Actual buffer for emg data and indexes to keep track of the circular buffer
+// Actual buffer for emg data and indices to keep track of the circular buffer
 uint16_t sb_data[SB_DATA_WINDOW];
 int8_t sb_front = -1;
 int8_t sb_rear = -1;
 
-// Actual buffer for peak filter and indexes to keep track of the circular buffer
+// Actual buffer for peak filter and indices to keep track of the circular buffer
 uint16_t pk_data[PK_DATA_WINDOW];
 int8_t pk_front = -1;
 int8_t pk_rear = -1;
 
-// Actual buffer for moving average filter and indexes to keep track of the circular buffer
+// Actual buffer for moving average filter and indices to keep track of the circular buffer
 uint16_t ma_data[MA_DATA_WINDOW];
 int8_t ma_front = -1;
 int8_t ma_rear = -1;
@@ -259,6 +259,7 @@ void main(void)
 {
     // initialize the device
     SYSTEM_Initialize();
+    // ^-^
 
     // When using interrupts, you need to set the Global and Peripheral Interrupt Enable bits
     // Use the following macros to:
@@ -281,22 +282,33 @@ void main(void)
     
     int count=0;
     uint16_t neutral_datapoint, result, datapoint;
+    uint8_t mode = 0;
     double time_elapsed;
     int increasing = 0;
+    uint8_t flex_flag, motor_started;
+    flex_flag = 0;
+    motor_started = 0;
 
+    LED_RA7_SetLow();
     while (1)
     {
-        if (SWITCH_RC5_GetValue() == 0 && start_flag == 0) {
+        if (MODE_RB4_GetValue() == 0)
+        {
+            mode ^= 1;
+            LED_RA7_Toggle();
+            __delay_ms(700);
+        }
+            
+        if (START_RC5_GetValue() == 0 && start_flag == 0) {
             //printf("START\r\n");
             start_flag = 1;
             __delay_ms(700);
-        } else if (SWITCH_RC5_GetValue() == 0 && start_flag == 1) {
-            //printf("STOP\r\n");
-            start_flag = 0;
-            __delay_ms(700);
-            TMR6_Stop();
+            break;
         }
-        
+    }
+    
+    while (1)
+    {
         if(start_flag == 1)
         {
             // Count the number of datapoints present in signal buffer
@@ -314,19 +326,45 @@ void main(void)
                 // Uses the neutral point to subtract it from the current datapoint.Rectifies (by taking absolute) the signal
                 result = get_moving_average(abs(datapoint - neutral_datapoint));
                 
-                if(result>= 25 && sent_1 == 0)
+                if(mode == 0)
                 {
-                    printf("1");
-                    sent_1 = 1;
-                    sent_0 = 0;
+                    // Turn motor at muscle flex. Turn back motor when released
+                    if(result>= 25 && sent_1 == 0)
+                    {
+                        printf("1");
+                        sent_1 = 1;
+                        sent_0 = 0;
+                    }
+                    else if(result<25 && sent_0 == 0)
+                    {
+                        printf("0");
+                        sent_0 = 1;
+                        sent_1 = 0;
+                    }
                 }
-                else if(result<25 && sent_0 == 0)
+                else
                 {
-                    printf("0");
-                    sent_0 = 1;
-                    sent_1 = 0;
+                    // Turn/Turn back motor when flexed.
+                    if(result>= 25 && flex_flag == 0)
+                    {
+                        flex_flag = 1;
+                        if(motor_started == 1)
+                        {
+                            motor_started =0;
+                            printf("0");
+                        }
+                        else
+                        {
+                            motor_started = 1;
+                            printf("1");
+                        }
+                        
+                    }
+                    else if(result<25 && flex_flag == 1)
+                    {
+                        flex_flag = 0;
+                    }
                 }
-                
                 // todo...Reject/ donot consider result until atleast 2*MIN_PK_GAP is calculated ????
                 
                 // Remove the first element (in FIFO order) since it has already been processed
