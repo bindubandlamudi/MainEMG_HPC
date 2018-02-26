@@ -47,6 +47,8 @@ uint8_t i;
 uint8_t sent_1 =0;
 uint8_t sent_0 =0;
 
+uint16_t pushup_count = 0;
+
 // Returns true if circular buffer is full
 bool sbuf_isfull() {
     if ((sb_front == sb_rear + 1) || (sb_front == 0 && sb_rear == SB_DATA_WINDOW - 1))
@@ -245,7 +247,7 @@ void TMR6_EMG_InterruptHandler(void)
 {
     if (start_flag == 1) {
         //ADCC_StartConversion(POT_RA0);
-        ADCC_StartConversion(EMG_RA1);
+        ADCC_StartConversion(EMG_RA2);
         adc_result_t adval = ADCC_GetConversionResult();
         // Every new sample point is added to the "Signal Circular Buffer"
         // Data is "buffered" (until the limit of 50 datapoints) so the main loop can get the first inserted element (FIFO)
@@ -348,6 +350,8 @@ void main(void)
                     if(result>= 25 && flex_flag == 0)
                     {
                         flex_flag = 1;
+                        pushup_count += 1;
+                        
                         if(motor_started == 1)
                         {
                             motor_started =0;
